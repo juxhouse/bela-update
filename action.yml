@@ -1,0 +1,17 @@
+name: BELA Update
+description: Prepare a repository, run the matching BELA updater offline, and upload the generated ECD file to BELA.
+
+outputs:
+  languages:
+    description: Detected language updaters.
+    value: ${{ steps.update.outputs.languages }}
+  sources:
+    description: Updated BELA source names.
+    value: ${{ steps.update.outputs.sources }}
+
+runs:
+  using: composite
+  steps:
+    - id: update
+      shell: bash
+      run: ${{ github.action_path }}/scripts/import-projects.sh

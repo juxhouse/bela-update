@@ -1,0 +1,32 @@
+name: BELA Update
+
+on:
+  workflow_call:
+    inputs:
+      bela-api-url:
+        description: Base URL of the BELA backend, for example https://bela.example.com.
+        required: true
+        type: string
+      parent-element-path:
+        description: Optional BELA parent element path.
+        required: false
+        type: string
+    secrets:
+      BELA_API_TOKEN:
+        description: BELA API token used to upload the generated ECD file.
+        required: true
+
+jobs:
+  bela-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: juxhouse/bela-update@v0.1.0
+        env:
+          BELA_API_URL: ${{ inputs.bela-api-url }}
+          BELA_API_TOKEN: ${{ secrets.BELA_API_TOKEN }}
+          BELA_PARENT_ELEMENT_PATH: ${{ inputs.parent-element-path }}
