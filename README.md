@@ -10,6 +10,7 @@ The action discovers supported projects in GitHub Actions, prepares each project
 - [Reusable Workflow](#reusable-workflow)
 - [Supported Detection](#supported-detection)
 - [Project Discovery](#project-discovery)
+- [Repository Configuration](#repository-configuration)
 - [Security Model](#security-model)
 
 ## Action
@@ -46,7 +47,7 @@ When using the action directly, configuration is passed through environment vari
 | --- | --- | --- |
 | `BELA_API_URL` | yes | BELA backend URL. |
 | `BELA_API_TOKEN` | yes | BELA API token. |
-| `BELA_PARENT_ELEMENT_PATH` | no | Optional BELA parent element path. |
+| `BELA_PARENT_ELEMENT_PATH` | no | Optional default BELA parent element path. `.bela/bela.yml` can override it per directory. |
 
 ## Reusable Workflow
 
@@ -73,7 +74,7 @@ jobs:
 | Input | Required | Description |
 | --- | --- | --- |
 | `bela-api-url` | yes | BELA backend URL. |
-| `parent-element-path` | no | Optional BELA parent element path. |
+| `parent-element-path` | no | Optional default BELA parent element path. `.bela/bela.yml` can override it per directory. |
 
 ### Reusable Workflow Secrets
 
@@ -99,6 +100,18 @@ The action automatically detects:
 The action starts at the repository root. If it detects a project there, it updates BELA from that project and does not scan deeper.
 
 If the root is not a project, the action scans child directories. When it finds a project in a directory, it updates BELA from that directory and does not scan that directory's children. It still continues scanning sibling directories.
+
+## Repository Configuration
+
+Any directory can define BELA configuration in `.bela/bela.yml`. The action applies configuration from the repository root down to each detected project, with the closest config taking precedence.
+
+```yaml
+ignore-projects: true
+parent-element-path: "billing-service"
+build-command: "./scripts/build-for-bela.sh --profile legacy-ci"
+```
+
+See [`.bela` directory configuration](docs/bela-directory.md) for the supported keys and inheritance rules.
 
 ## Security Model
 

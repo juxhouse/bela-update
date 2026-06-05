@@ -31,6 +31,8 @@ for project_dir in "${project_dirs[@]}"; do
   language="$(detect_project_language "$project_dir")"
   source_name="$(bela_project_source "$project_dir")"
   source_slug="$(bela_log_slug "$source_name")"
+  parent_element_path="$(bela_effective_parent_element_path "$root_directory" "$project_dir" "${BELA_PARENT_ELEMENT_PATH:-}")"
+  build_command="$(bela_effective_build_command "$root_directory" "$project_dir")"
   project_log_directory="$logs_directory/$project_index-$source_slug"
 
   languages+=("$language")
@@ -38,6 +40,12 @@ for project_dir in "${project_dirs[@]}"; do
 
   bela_group_start "Project $project_index/$project_count: $source_name ($language)"
   bela_log "Directory: $project_dir"
+  if [[ -n "$parent_element_path" ]]; then
+    bela_log "Parent element path: $parent_element_path"
+  fi
+  if [[ -n "$build_command" ]]; then
+    bela_log "Build command: $build_command"
+  fi
 
   if [[ "${BELA_DRY_RUN:-false}" == "true" ]]; then
     bela_log "Dry run enabled. Skipping prepare, updater, and upload."
@@ -50,7 +58,8 @@ for project_dir in "${project_dirs[@]}"; do
       BELA_WORKING_DIRECTORY="$project_dir" \
       BELA_LANGUAGE="$language" \
       BELA_SOURCE="$source_name" \
-      "$action_dir/scripts/prepare.sh" || {
+      "$action_dir/scripts/prepare.sh" \
+      "$build_command" || {
         status=$?
         bela_group_end
         exit "$status"
@@ -61,6 +70,7 @@ for project_dir in "${project_dirs[@]}"; do
       BELA_WORKING_DIRECTORY="$project_dir" \
       BELA_LANGUAGE="$language" \
       BELA_SOURCE="$source_name" \
+      BELA_PARENT_ELEMENT_PATH="$parent_element_path" \
       "$action_dir/scripts/run-updater.sh" || {
         status=$?
         bela_group_end
