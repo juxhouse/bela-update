@@ -56,6 +56,44 @@ bela_unquote_config_value() {
   printf '%s\n' "$value"
 }
 
+bela_strip_inline_comment() {
+  local value="$1"
+  local result=""
+  local char
+  local previous=""
+  local in_single_quote="false"
+  local in_double_quote="false"
+  local length="${#value}"
+  local i
+
+  for ((i = 0; i < length; i++)); do
+    char="${value:i:1}"
+
+    if [[ "$char" == "'" && "$in_double_quote" == "false" ]]; then
+      if [[ "$in_single_quote" == "true" ]]; then
+        in_single_quote="false"
+      else
+        in_single_quote="true"
+      fi
+    elif [[ "$char" == '"' && "$in_single_quote" == "false" ]]; then
+      if [[ "$in_double_quote" == "true" ]]; then
+        in_double_quote="false"
+      else
+        in_double_quote="true"
+      fi
+    elif [[ "$char" == "#" && "$in_single_quote" == "false" && "$in_double_quote" == "false" ]]; then
+      if [[ -z "$previous" || "$previous" =~ [[:space:]] ]]; then
+        break
+      fi
+    fi
+
+    result+="$char"
+    previous="$char"
+  done
+
+  bela_trim "$result"
+}
+
 bela_config_file() {
   local dir="$1"
 
@@ -85,6 +123,7 @@ bela_read_config_value() {
     if [[ "$trimmed" == "$key":* ]]; then
       value="${trimmed#*:}"
       value="$(bela_trim "$value")"
+      value="$(bela_strip_inline_comment "$value")"
       BELA_CONFIG_VALUE="$(bela_unquote_config_value "$value")"
       return 0
     fi
