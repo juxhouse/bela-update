@@ -105,7 +105,7 @@ If the root is not a project, the action scans child directories. When it finds 
 
 On each push, the action includes the GitHub branch in the source name using the format `source-name (branch-name)`. After all detected projects are uploaded successfully, it fetches and prunes the repository's remote branches and sends the branches that are not merged into `origin/HEAD` to BELA. BELA uses that list to remove branch sources for deleted or merged branches.
 
-The action requires `origin/HEAD` to identify the repository's main branch. Branch cleanup is skipped when `BELA_DRY_RUN=true` or `BELA_SKIP_UPLOAD=true`.
+The action uses `origin/HEAD` or the repository's default branch from the GitHub event to identify the main branch. Branch cleanup is skipped when `BELA_DRY_RUN=true` or `BELA_SKIP_UPLOAD=true`.
 
 ## Repository Configuration
 
