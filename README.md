@@ -101,6 +101,12 @@ The action starts at the repository root. If it detects a project there, it upda
 
 If the root is not a project, the action scans child directories. When it finds a project in a directory, it updates BELA from that directory and does not scan that directory's children. It still continues scanning sibling directories.
 
+## Branch Sources
+
+On each push, the action includes the GitHub branch in the source name using the format `source-name (branch-name)`. After all detected projects are uploaded successfully, it fetches and prunes the repository's remote branches and sends the branches that are not merged into `origin/HEAD` to BELA. BELA uses that list to remove branch sources for deleted or merged branches.
+
+The action requires `origin/HEAD` to identify the repository's main branch. Branch cleanup is skipped when `BELA_DRY_RUN=true` or `BELA_SKIP_UPLOAD=true`.
+
 ## Repository Configuration
 
 Any directory can define BELA configuration in `.bela/bela.yml`. The action applies configuration from the repository root down to each detected project, with the closest config taking precedence.

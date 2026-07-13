@@ -242,28 +242,42 @@ bela_effective_build_command() {
   printf '%s\n' "$effective_value"
 }
 
-bela_project_source() {
+bela_project_source_base() {
   local project_dir="$1"
   local repository="${GITHUB_REPOSITORY:-repo}"
   local workspace="${GITHUB_WORKSPACE:-}"
   local workspace_path
   local project_path
+  local source
 
   project_dir="$(cd "$project_dir" && pwd -P)"
 
   if [[ -z "$workspace" ]]; then
-    echo "$repository"
-    return 0
-  fi
-
-  workspace_path="$(cd "$workspace" && pwd -P)"
-
-  if [[ "$project_dir" == "$workspace_path" ]]; then
-    echo "$repository"
-  elif [[ "$project_dir" == "$workspace_path"/* ]]; then
-    project_path="${project_dir#"$workspace_path"/}"
-    echo "$repository/$project_path"
+    source="$repository"
   else
-    echo "$repository"
+    workspace_path="$(cd "$workspace" && pwd -P)"
+
+    if [[ "$project_dir" == "$workspace_path" ]]; then
+      source="$repository"
+    elif [[ "$project_dir" == "$workspace_path"/* ]]; then
+      project_path="${project_dir#"$workspace_path"/}"
+      source="$repository/$project_path"
+    else
+      source="$repository"
+    fi
   fi
+
+  echo "$source"
+}
+
+bela_project_source() {
+  local source
+  local branch="${GITHUB_REF_NAME:-}"
+
+  source="$(bela_project_source_base "$1")"
+  if [[ -n "$branch" ]]; then
+    source+=" ($branch)"
+  fi
+
+  echo "$source"
 }
