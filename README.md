@@ -32,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: juxhouse/bela-update@v0.1.0
+      - uses: juxhouse/bela-update@2026-07-13-09-40
         env:
           BELA_API_URL: ${{ vars.BELA_API_URL }}
           BELA_API_TOKEN: ${{ secrets.BELA_API_TOKEN }}
