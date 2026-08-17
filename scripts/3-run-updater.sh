@@ -2,8 +2,8 @@
 set -euo pipefail
 
 working_directory="${BELA_WORKING_DIRECTORY:-.}"
-language="${BELA_LANGUAGE:?BELA_LANGUAGE is required. Run detect-language.sh first.}"
-source="${BELA_SOURCE:?BELA_SOURCE is required. Run detect-language.sh first.}"
+language="${BELA_LANGUAGE:?BELA_LANGUAGE is required. Run 1-detect-language.sh first.}"
+source="${BELA_SOURCE:?BELA_SOURCE is required. Run 1-detect-language.sh first.}"
 parent_element_path="${BELA_PARENT_ELEMENT_PATH:-}"
 updater_tag="${BELA_UPDATER_TAG:-latest}"
 
@@ -39,8 +39,14 @@ case "$language" in
     fi
 
     m2_args=()
-    if [[ -d "$PWD/.m2" ]]; then
-      m2_args=(-v "$PWD/.m2:/.m2:ro")
+    if [[ -f pom.xml ]]; then
+      m2_directory="${HOME:?HOME is required to locate the default Maven .m2 directory.}/.m2"
+      if [[ ! -d "$m2_directory" ]]; then
+        echo "Could not find the default Maven .m2 directory at $m2_directory." >&2
+        exit 1
+      fi
+      m2_directory="$(cd "$m2_directory" && pwd -P)"
+      m2_args=(-v "$m2_directory:/.m2:ro")
     fi
 
     docker run --rm --pull=never --network=none \

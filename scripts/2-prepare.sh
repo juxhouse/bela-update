@@ -2,7 +2,7 @@
 set -euo pipefail
 
 working_directory="${BELA_WORKING_DIRECTORY:-.}"
-language="${BELA_LANGUAGE:?BELA_LANGUAGE is required. Run detect-language.sh first.}"
+language="${BELA_LANGUAGE:?BELA_LANGUAGE is required. Run 1-detect-language.sh first.}"
 updater_tag="${BELA_UPDATER_TAG:-latest}"
 build_command="${1:-}"
 
@@ -61,16 +61,20 @@ case "$language" in
     # updater jar, but no Maven, Gradle, or JDK build tools. Prepare Java
     # projects with build-tool images, then run the updater offline later.
     if [[ -f pom.xml ]]; then
-      mkdir -p .m2
-      java_maven_build_command="${build_command:-mvn -B -Dmaven.repo.local=/.m2/repository clean install && mvn -B -Dmaven.repo.local=/.m2/repository dependency:build-classpath -Dmdep.outputFile=target/classpath.txt}"
+      m2_directory="${HOME:?HOME is required to locate the default Maven .m2 directory.}/.m2"
+      if [[ ! -d "$m2_directory" ]]; then
+        echo "Could not find the default Maven .m2 directory at $m2_directory." >&2
+        exit 1
+      fi
+      m2_directory="$(cd "$m2_directory" && pwd -P)"
+      java_maven_build_command="${build_command:-mvn -B clean install && mvn -B dependency:build-classpath -Dmdep.outputFile=target/classpath.txt}"
       docker pull maven:3.9.6-eclipse-temurin-21
       docker run --rm \
-        -v "$PWD/.m2:/.m2" \
-        -v "$PWD/.m2:/root/.m2" \
+        -v "$m2_directory:/root/.m2" \
         -v "$PWD:/workspace" \
         -w /workspace \
         maven:3.9.6-eclipse-temurin-21 \
-        /bin/sh -lc "mkdir -p /workspace/.bela /.m2 /root/.m2 /workspace/target && $java_maven_build_command"
+        /bin/sh -lc "mkdir -p /workspace/.bela /workspace/target && $java_maven_build_command"
     else
       java_gradle_build_command="${build_command:-if [ -f ./gradlew ]; then chmod +x ./gradlew && ./gradlew clean build && ./gradlew belaBuild --init-script bela.gradle; else gradle clean build && gradle belaBuild --init-script bela.gradle; fi}"
       docker pull gradle:8.10.2-jdk21

@@ -14,4 +14,4 @@ runs:
   steps:
     - id: update
       shell: bash
-      run: ${{ github.action_path }}/scripts/import-projects.sh
+      run: ${{ github.action_path }}/scripts/0-import-projects.sh
