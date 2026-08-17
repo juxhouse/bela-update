@@ -9,8 +9,6 @@ detect_project_language() {
     echo "typescript"
   elif [[ -f "$project_dir/pom.xml" || -f "$project_dir/build.gradle" || -f "$project_dir/build.gradle.kts" || -f "$project_dir/gradlew" ]]; then
     echo "java"
-  elif [[ -f "$project_dir/Gemfile" ]]; then
-    echo "ruby"
   elif compgen -G "$project_dir/*.sln" > /dev/null || compgen -G "$project_dir/*.csproj" > /dev/null; then
     echo "dotnet"
   else

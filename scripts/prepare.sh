@@ -46,16 +46,6 @@ case "$language" in
     fi
     ;;
 
-  ruby)
-    if [[ -n "$build_command" ]]; then
-      run_prepare_in_updater_image \
-        "mkdir -p /workspace/.bela/external_gems && $build_command"
-    else
-      run_prepare_in_updater_image \
-        'mkdir -p /workspace/.bela/external_gems && gem install bundler --no-document && bundle config set --local path /workspace/.bela/external_gems && bundle install'
-    fi
-    ;;
-
   dotnet)
     if [[ -n "$build_command" ]]; then
       run_prepare_in_updater_image \

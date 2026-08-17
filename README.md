@@ -60,7 +60,6 @@ The action automatically detects:
 | Clojure | `deps.edn`, `project.clj` |
 | Java | `pom.xml`, `build.gradle`, `build.gradle.kts`, `gradlew` |
 | JavaScript | `package.json` |
-| Ruby | `Gemfile` |
 | TypeScript | `package.json` |
 
 ## Project Discovery

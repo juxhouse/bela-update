@@ -15,20 +15,6 @@ docker pull "$updater_image"
 
 parent_args=()
 case "$language" in
-  ruby)
-    source_args=(--source "$source")
-    if [[ -n "$parent_element_path" ]]; then
-      parent_args=(--parent-element-path "$parent_element_path")
-    fi
-    docker run --rm --pull=never --network=none \
-      -v "$PWD:/workspace" \
-      -v "$PWD/.bela:/.bela" \
-      -v "$PWD/.bela/external_gems:/external_gems" \
-      "$updater_image" \
-      "${source_args[@]}" \
-      "${parent_args[@]}"
-    ;;
-
   dotnet)
     source_args=(-source "$source")
     if [[ -n "$parent_element_path" ]]; then
