@@ -49,9 +49,19 @@ Sets the build or preparation command for all projects in the directory tree.
 build-command: "./scripts/build-for-bela.sh --profile legacy-ci"
 ```
 
-This value overrides any value inherited from parent directories. The command runs from the detected project directory inside the same container environment that the language default uses.
+This value overrides any value inherited from parent directories. The command runs directly on the runner from the detected project directory.
 
 When `build-command` is set, it replaces the language default preparation command. The command must leave the project in the state expected by the updater.
+
+Preparation requirements by language:
+
+| Language | Preparation docs |
+| --- | --- |
+| .NET | [.NET custom build](https://github.com/juxhouse/bela-resources/blob/main/updaters/.NET-Other.md) |
+| Clojure | [Clojure custom build](https://github.com/juxhouse/bela-resources/blob/main/updaters/Clojure-Other.md) |
+| Java | [Java custom build](https://github.com/juxhouse/bela-resources/blob/main/updaters/Java-Other.md) |
+| JavaScript | [JavaScript custom build](https://github.com/juxhouse/bela-resources/blob/main/updaters/Javascript-Other.md) |
+| TypeScript | [TypeScript custom build](https://github.com/juxhouse/bela-resources/blob/main/updaters/Typescript-Other.md) |
 
 ### `updater-args`
 
@@ -69,4 +79,3 @@ Common options:
 | --- | --- |
 | `parent-element-path` | Places imported elements under the given BELA parent element path. |
 | `ignore-test-code` | Excludes test code when supported by the updater. |
-

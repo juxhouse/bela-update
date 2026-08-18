@@ -9,6 +9,11 @@ build_command="${1:-}"
 cd "$working_directory"
 mkdir -p .bela
 
+if [[ -n "$build_command" ]]; then
+  bash -lc "$build_command"
+  exit 0
+fi
+
 updater_image="juxhouse/bela-updater-${language}:${updater_tag}"
 
 run_prepare_in_updater_image() {
@@ -27,33 +32,18 @@ run_prepare_in_updater_image() {
 
 case "$language" in
   clojure)
-    if [[ -n "$build_command" ]]; then
-      run_prepare_in_updater_image \
-        "mkdir -p /workspace/.bela /workspace/.m2 /workspace/.gitlibs && $build_command && { [ ! -d /root/.m2 ] || cp -R /root/.m2/. /workspace/.m2/; } && { [ ! -d /root/.gitlibs ] || cp -R /root/.gitlibs/. /workspace/.gitlibs/; }"
-    else
-      run_prepare_in_updater_image \
-        'mkdir -p /workspace/.bela /workspace/.m2 /workspace/.gitlibs && if [ -f project.clj ]; then lein deps; else clojure -A:test:dev -P && clojure -A:test:dev -Spath; fi && { [ ! -d /root/.m2 ] || cp -R /root/.m2/. /workspace/.m2/; } && { [ ! -d /root/.gitlibs ] || cp -R /root/.gitlibs/. /workspace/.gitlibs/; }'
-    fi
+    run_prepare_in_updater_image \
+      'mkdir -p /workspace/.bela /workspace/.m2 /workspace/.gitlibs && if [ -f project.clj ]; then lein deps; else clojure -A:test:dev -P && clojure -A:test:dev -Spath; fi && { [ ! -d /root/.m2 ] || cp -R /root/.m2/. /workspace/.m2/; } && { [ ! -d /root/.gitlibs ] || cp -R /root/.gitlibs/. /workspace/.gitlibs/; }'
     ;;
 
   typescript)
-    if [[ -n "$build_command" ]]; then
-      run_prepare_in_updater_image \
-        "mkdir -p /workspace/.bela && $build_command"
-    else
-      run_prepare_in_updater_image \
-        'mkdir -p /workspace/.bela && if [ -f package-lock.json ]; then npm ci; elif [ -f npm-shrinkwrap.json ]; then npm ci; else npm install; fi'
-    fi
+    run_prepare_in_updater_image \
+      'mkdir -p /workspace/.bela && if [ -f package-lock.json ]; then npm ci; elif [ -f npm-shrinkwrap.json ]; then npm ci; else npm install; fi'
     ;;
 
   dotnet)
-    if [[ -n "$build_command" ]]; then
-      run_prepare_in_updater_image \
-        "mkdir -p /workspace/.bela/dependencies && $build_command"
-    else
-      run_prepare_in_updater_image \
-        'mkdir -p /workspace/.bela/dependencies && dotnet restore --packages /workspace/.bela/dependencies'
-    fi
+    run_prepare_in_updater_image \
+      'mkdir -p /workspace/.bela/dependencies && dotnet restore --packages /workspace/.bela/dependencies'
     ;;
 
   java)
@@ -67,7 +57,7 @@ case "$language" in
         exit 1
       fi
       m2_directory="$(cd "$m2_directory" && pwd -P)"
-      java_maven_build_command="${build_command:-mvn -B clean install && mvn -B dependency:build-classpath -Dmdep.outputFile=target/classpath.txt}"
+      java_maven_build_command="mvn -B clean install && mvn -B dependency:build-classpath -Dmdep.outputFile=target/classpath.txt"
       docker pull maven:3.9.6-eclipse-temurin-21
       docker run --rm \
         -v "$m2_directory:/root/.m2" \
@@ -76,7 +66,7 @@ case "$language" in
         maven:3.9.6-eclipse-temurin-21 \
         /bin/sh -lc "mkdir -p /workspace/.bela /workspace/target && $java_maven_build_command"
     else
-      java_gradle_build_command="${build_command:-if [ -f ./gradlew ]; then chmod +x ./gradlew && ./gradlew clean build && ./gradlew belaBuild --init-script bela.gradle; else gradle clean build && gradle belaBuild --init-script bela.gradle; fi}"
+      java_gradle_build_command="if [ -f ./gradlew ]; then chmod +x ./gradlew && ./gradlew clean build && ./gradlew belaBuild --init-script bela.gradle; else gradle clean build && gradle belaBuild --init-script bela.gradle; fi"
       docker pull gradle:8.10.2-jdk21
       cat > bela.gradle <<'EOF'
 allprojects {
