@@ -14,7 +14,9 @@ root_directory="$(cd "$root_directory" && pwd -P)"
 export GITHUB_WORKSPACE="${GITHUB_WORKSPACE:-$root_directory}"
 logs_directory="$root_directory/.bela/logs"
 
-mapfile -t project_dirs < <(find_project_dirs "$root_directory")
+bela_reset_project_discovery
+find_project_dirs "$root_directory"
+project_dirs=("${BELA_PROJECT_DIRS[@]}")
 
 if [[ "${#project_dirs[@]}" -eq 0 ]]; then
   echo "Could not detect a supported BELA importer in $root_directory or its child directories." >&2
@@ -52,8 +54,8 @@ for project_dir in "${project_dirs[@]}"; do
   source_base="$(bela_project_source_base "$project_dir")"
   source_name="$(bela_project_source "$project_dir")"
   source_slug="$(bela_log_slug "$source_name")"
-  parent_element_path="$(bela_effective_parent_element_path "$root_directory" "$project_dir" "${BELA_PARENT_ELEMENT_PATH:-}")"
-  build_command="$(bela_effective_build_command "$root_directory" "$project_dir")"
+  build_command="$(bela_project_build_command "$project_dir")"
+  updater_args="$(bela_project_updater_args "$project_dir")"
   project_log_directory="$logs_directory/$project_index-$source_slug"
 
   languages+=("$language")
@@ -62,11 +64,15 @@ for project_dir in "${project_dirs[@]}"; do
 
   bela_group_start "Project $project_index/$project_count: $source_name ($language)"
   bela_log "Directory: $project_dir"
-  if [[ -n "$parent_element_path" ]]; then
-    bela_log "Parent element path: $parent_element_path"
-  fi
   if [[ -n "$build_command" ]]; then
     bela_log "Build command: $build_command"
+  fi
+
+  if [[ -n "$updater_args" ]]; then
+    bela_log "Updater options:"
+    while IFS= read -r updater_arg && IFS= read -r updater_value; do
+      bela_log "  ${updater_arg#-}: $updater_value"
+    done <<< "$updater_args"
   fi
 
   if [[ "${BELA_DRY_RUN:-false}" == "true" ]]; then
@@ -92,7 +98,7 @@ for project_dir in "${project_dirs[@]}"; do
       BELA_WORKING_DIRECTORY="$project_dir" \
       BELA_LANGUAGE="$language" \
       BELA_SOURCE="$source_name" \
-      BELA_PARENT_ELEMENT_PATH="$parent_element_path" \
+      BELA_UPDATER_ARGS="$updater_args" \
       "$action_dir/scripts/3-run-updater.sh" || {
         status=$?
         bela_group_end

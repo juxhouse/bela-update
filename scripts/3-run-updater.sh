@@ -4,8 +4,8 @@ set -euo pipefail
 working_directory="${BELA_WORKING_DIRECTORY:-.}"
 language="${BELA_LANGUAGE:?BELA_LANGUAGE is required. Run 1-detect-language.sh first.}"
 source="${BELA_SOURCE:?BELA_SOURCE is required. Run 1-detect-language.sh first.}"
-parent_element_path="${BELA_PARENT_ELEMENT_PATH:-}"
 updater_tag="${BELA_UPDATER_TAG:-latest}"
+updater_args=()
 
 cd "$working_directory"
 mkdir -p .bela
@@ -13,13 +13,14 @@ mkdir -p .bela
 updater_image="juxhouse/bela-updater-${language}:${updater_tag}"
 docker pull "$updater_image"
 
-parent_args=()
+if [[ -n "${BELA_UPDATER_ARGS:-}" ]]; then
+  mapfile -t configured_updater_args <<< "$BELA_UPDATER_ARGS"
+  updater_args+=("${configured_updater_args[@]}")
+fi
+
 case "$language" in
   dotnet)
     source_args=(-source "$source")
-    if [[ -n "$parent_element_path" ]]; then
-      parent_args=(-parent-element-path "$parent_element_path")
-    fi
     docker run --rm --pull=never --network=none \
       -v "$PWD:/workspace" \
       -v "$PWD/.bela:/.bela" \
@@ -27,16 +28,13 @@ case "$language" in
       "$updater_image" \
       /App/CodeAnalyzer.dll \
       "${source_args[@]}" \
-      "${parent_args[@]}" \
+      "${updater_args[@]}" \
       -workspace /workspace \
       -output /.bela/bela-update.ecd
     ;;
 
   java)
     source_args=(-source "$source")
-    if [[ -n "$parent_element_path" ]]; then
-      parent_args=(-parent-element-path "$parent_element_path")
-    fi
 
     m2_args=()
     if [[ -f pom.xml ]]; then
@@ -55,20 +53,17 @@ case "$language" in
       "${m2_args[@]}" \
       "$updater_image" \
       "${source_args[@]}" \
-      "${parent_args[@]}"
+      "${updater_args[@]}"
     ;;
 
   clojure|typescript)
     source_args=(-source "$source")
-    if [[ -n "$parent_element_path" ]]; then
-      parent_args=(-parent-element-path "$parent_element_path")
-    fi
     docker run --rm --pull=never --network=none \
       -v "$PWD:/workspace" \
       -v "$PWD/.bela:/.bela" \
       "$updater_image" \
       "${source_args[@]}" \
-      "${parent_args[@]}"
+      "${updater_args[@]}"
     ;;
 
   *)

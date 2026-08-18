@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
 
+declare -a BELA_PROJECT_DIRS=()
+declare -A BELA_PROJECT_BUILD_COMMANDS=()
+declare -A BELA_PROJECT_UPDATER_ARGS=()
+
+bela_reset_project_discovery() {
+  BELA_PROJECT_DIRS=()
+  BELA_PROJECT_BUILD_COMMANDS=()
+  BELA_PROJECT_UPDATER_ARGS=()
+}
+
 detect_project_language() {
   local project_dir="$1"
 
@@ -92,6 +102,17 @@ bela_strip_inline_comment() {
   bela_trim "$result"
 }
 
+bela_line_indent() {
+  local value="$1"
+  local value_without_cr
+  local without_indent
+
+  value_without_cr="${value%$'\r'}"
+  without_indent="${value_without_cr#"${value_without_cr%%[![:space:]]*}"}"
+
+  printf '%s\n' "$((${#value_without_cr} - ${#without_indent}))"
+}
+
 bela_config_file() {
   local dir="$1"
 
@@ -103,6 +124,7 @@ bela_read_config_value() {
   local key="$2"
   local line
   local trimmed
+  local indent
   local value
 
   BELA_CONFIG_VALUE=""
@@ -118,6 +140,11 @@ bela_read_config_value() {
       continue
     fi
 
+    indent="$(bela_line_indent "$line")"
+    if [[ "$indent" != "0" ]]; then
+      continue
+    fi
+
     if [[ "$trimmed" == "$key":* ]]; then
       value="${trimmed#*:}"
       value="$(bela_trim "$value")"
@@ -128,6 +155,78 @@ bela_read_config_value() {
   done < "$file"
 
   return 1
+}
+
+bela_read_config_map() {
+  local file="$1"
+  local key="$2"
+  local line
+  local trimmed
+  local indent
+  local map_indent=""
+  local value
+  local child_key
+  local child_value
+
+  if [[ ! -f "$file" ]]; then
+    return 1
+  fi
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    trimmed="$(bela_trim "$line")"
+
+    if [[ -z "$trimmed" || "$trimmed" == \#* ]]; then
+      continue
+    fi
+
+    indent="$(bela_line_indent "$line")"
+
+    if [[ -n "$map_indent" ]]; then
+      if (( indent <= map_indent )); then
+        break
+      fi
+
+      trimmed="$(bela_strip_inline_comment "$trimmed")"
+      if [[ -z "$trimmed" ]]; then
+        continue
+      fi
+
+      if [[ "$trimmed" != *:* ]]; then
+        echo "Unsupported YAML entry under '$key' in $file: $trimmed" >&2
+        return 2
+      fi
+
+      child_key="${trimmed%%:*}"
+      child_value="${trimmed#*:}"
+      child_key="$(bela_trim "$child_key")"
+      child_value="$(bela_trim "$child_value")"
+
+      if [[ -z "$child_key" || "$child_key" == -* ]]; then
+        echo "Unsupported YAML entry under '$key' in $file: $trimmed" >&2
+        return 2
+      fi
+
+      printf '%s\t%s\n' "$child_key" "$(bela_unquote_config_value "$child_value")"
+      continue
+    fi
+
+    if [[ "$indent" != "0" ]]; then
+      continue
+    fi
+
+    if [[ "$trimmed" == "$key":* ]]; then
+      value="${trimmed#*:}"
+      value="$(bela_trim "$value")"
+      value="$(bela_strip_inline_comment "$value")"
+      if [[ -n "$value" ]]; then
+        echo "Unsupported inline value for '$key' in $file. Use a nested mapping." >&2
+        return 2
+      fi
+      map_indent="$indent"
+    fi
+  done < "$file"
+
+  [[ -n "$map_indent" ]]
 }
 
 bela_config_ignore_projects() {
@@ -145,23 +244,139 @@ bela_config_ignore_projects() {
   [[ "$value" == "true" ]]
 }
 
+bela_valid_updater_option_name() {
+  local option_name="$1"
+
+  [[ "$option_name" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]]
+}
+
+bela_apply_directory_config() {
+  local dir="$1"
+  local build_command_name="$2"
+  local updater_options_name="$3"
+  local file
+  local option_name
+  local option_value
+  local option_line
+  local option_output
+  local status
+  local -n build_command_ref="$build_command_name"
+  local -n updater_options_ref="$updater_options_name"
+
+  file="$(bela_config_file "$dir")"
+
+  if bela_read_config_value "$file" "build-command"; then
+    build_command_ref="$BELA_CONFIG_VALUE"
+  fi
+
+  if option_output="$(bela_read_config_map "$file" "updater-args")"; then
+    if [[ -n "$option_output" ]]; then
+      while IFS= read -r option_line; do
+        option_name="${option_line%%$'\t'*}"
+        option_value="${option_line#*$'\t'}"
+
+        if ! bela_valid_updater_option_name "$option_name"; then
+          echo "Invalid updater option name '$option_name' in $file. Use letters, numbers, underscores, and hyphens only." >&2
+          return 1
+        fi
+
+        updater_options_ref["$option_name"]="$option_value"
+      done <<< "$option_output"
+    fi
+  else
+    status=$?
+    if [[ "$status" -gt 1 ]]; then
+      return "$status"
+    fi
+  fi
+}
+
+bela_updater_args_from_options() {
+  local updater_options_name="$1"
+  local option_name
+  local -n updater_options_ref="$updater_options_name"
+
+  if ((${#updater_options_ref[@]} == 0)); then
+    return 0
+  fi
+
+  while IFS= read -r option_name; do
+    if [[ -n "${updater_options_ref[$option_name]}" ]]; then
+      printf '%s\n%s\n' "-$option_name" "${updater_options_ref[$option_name]}"
+    fi
+  done < <(printf '%s\n' "${!updater_options_ref[@]}" | sort)
+}
+
+bela_updater_options_from_lines() {
+  local option_lines="$1"
+  local updater_options_name="$2"
+  local option_line
+  local option_name
+  local option_value
+  local -n updater_options_ref="$updater_options_name"
+
+  if [[ -z "$option_lines" ]]; then
+    return 0
+  fi
+
+  while IFS= read -r option_line; do
+    option_name="${option_line%%$'\t'*}"
+    option_value="${option_line#*$'\t'}"
+    updater_options_ref["$option_name"]="$option_value"
+  done <<< "$option_lines"
+}
+
+bela_updater_options_to_lines() {
+  local updater_options_name="$1"
+  local option_name
+  local -n updater_options_ref="$updater_options_name"
+
+  if ((${#updater_options_ref[@]} == 0)); then
+    return 0
+  fi
+
+  while IFS= read -r option_name; do
+    printf '%s\t%s\n' "$option_name" "${updater_options_ref[$option_name]}"
+  done < <(printf '%s\n' "${!updater_options_ref[@]}" | sort)
+}
+
 find_project_dirs() {
   local dir="$1"
+  local build_command=""
+  local updater_option_lines=""
+  local -A default_updater_options=()
 
-  find_project_dirs_with_config "$dir"
+  if [[ -n "${BELA_PARENT_ELEMENT_PATH:-}" ]]; then
+    default_updater_options["parent-element-path"]="$BELA_PARENT_ELEMENT_PATH"
+  fi
+
+  updater_option_lines="$(bela_updater_options_to_lines default_updater_options)"
+
+  find_project_dirs_with_config "$dir" "$build_command" "$updater_option_lines"
 }
 
 find_project_dirs_with_config() {
   local dir="$1"
+  local inherited_build_command="$2"
+  local inherited_updater_options="$3"
   local child
   local child_name
+  local build_command="$inherited_build_command"
+  local updater_option_lines
+  local -A effective_updater_options=()
 
   if bela_config_ignore_projects "$dir"; then
     return 0
   fi
 
+  bela_updater_options_from_lines "$inherited_updater_options" effective_updater_options
+  bela_apply_directory_config "$dir" build_command effective_updater_options || return $?
+  updater_option_lines="$(bela_updater_options_to_lines effective_updater_options)"
+
   if detect_project_language "$dir" > /dev/null; then
-    echo "$dir"
+    BELA_PROJECT_DIRS+=("$dir")
+    BELA_PROJECT_BUILD_COMMANDS["$dir"]="$build_command"
+    BELA_PROJECT_UPDATER_ARGS["$dir"]="$(bela_updater_args_from_options effective_updater_options)"
     return 0
   fi
 
@@ -171,73 +386,20 @@ find_project_dirs_with_config() {
       continue
     fi
 
-    find_project_dirs_with_config "$child"
+    find_project_dirs_with_config "$child" "$build_command" "$updater_option_lines"
   done < <(find "$dir" -mindepth 1 -maxdepth 1 -type d | sort)
 }
 
-bela_config_scope_dirs() {
-  local root_dir="$1"
-  local project_dir="$2"
-  local relative_path
-  local current_dir
-  local path_part
-  local -a path_parts
+bela_project_build_command() {
+  local project_dir="$1"
 
-  root_dir="$(cd "$root_dir" && pwd -P)"
-  project_dir="$(cd "$project_dir" && pwd -P)"
-
-  printf '%s\n' "$root_dir"
-
-  if [[ "$project_dir" == "$root_dir" ]]; then
-    return 0
-  fi
-
-  if [[ "$project_dir" != "$root_dir"/* ]]; then
-    return 0
-  fi
-
-  relative_path="${project_dir#"$root_dir"/}"
-  current_dir="$root_dir"
-
-  IFS=/ read -r -a path_parts <<< "$relative_path"
-  for path_part in "${path_parts[@]}"; do
-    current_dir="$current_dir/$path_part"
-    printf '%s\n' "$current_dir"
-  done
+  printf '%s\n' "${BELA_PROJECT_BUILD_COMMANDS[$project_dir]:-}"
 }
 
-bela_effective_parent_element_path() {
-  local root_dir="$1"
-  local project_dir="$2"
-  local effective_value="${3:-}"
-  local scope_dir
-  local file
+bela_project_updater_args() {
+  local project_dir="$1"
 
-  while IFS= read -r scope_dir; do
-    file="$(bela_config_file "$scope_dir")"
-    if bela_read_config_value "$file" "parent-element-path"; then
-      effective_value="$BELA_CONFIG_VALUE"
-    fi
-  done < <(bela_config_scope_dirs "$root_dir" "$project_dir")
-
-  printf '%s\n' "$effective_value"
-}
-
-bela_effective_build_command() {
-  local root_dir="$1"
-  local project_dir="$2"
-  local effective_value="${3:-}"
-  local scope_dir
-  local file
-
-  while IFS= read -r scope_dir; do
-    file="$(bela_config_file "$scope_dir")"
-    if bela_read_config_value "$file" "build-command"; then
-      effective_value="$BELA_CONFIG_VALUE"
-    fi
-  done < <(bela_config_scope_dirs "$root_dir" "$project_dir")
-
-  printf '%s\n' "$effective_value"
+  printf '%s\n' "${BELA_PROJECT_UPDATER_ARGS[$project_dir]:-}"
 }
 
 bela_project_source_base() {

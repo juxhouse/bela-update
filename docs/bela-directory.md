@@ -6,11 +6,11 @@ The supported config format is a small top-level YAML subset:
 
 ```yaml
 ignore-projects: true
-parent-element-path: "billing-service"
 build-command: "./scripts/build-for-bela.sh --profile legacy-ci"
+updater-args:
+  parent-element-path: "billing-service"
+  ignore-test-code: true
 ```
-
-Nested YAML objects and multiline values are not supported.
 
 ## Inheritance
 
@@ -27,7 +27,7 @@ repo/
       pom.xml
 ```
 
-The `billing` project receives config from `repo/.bela/bela.yml`, then `repo/services/.bela/bela.yml`. If both files set `parent-element-path` or `build-command`, the value from `services` wins.
+The `billing` project receives config from `repo/.bela/bela.yml`, then `repo/services/.bela/bela.yml`. When both files configure the same behavior, the value from `services` wins.
 
 ## Keys
 
@@ -41,16 +41,6 @@ ignore-projects: true
 
 This is useful for examples, archived code, generated fixtures, or projects that should not be sent to BELA.
 
-### `parent-element-path`
-
-Sets the BELA parent element path for all projects in the directory tree.
-
-```yaml
-parent-element-path: "billing-service"
-```
-
-This value overrides `BELA_PARENT_ELEMENT_PATH` and any value inherited from parent directories.
-
 ### `build-command`
 
 Sets the build or preparation command for all projects in the directory tree.
@@ -62,3 +52,21 @@ build-command: "./scripts/build-for-bela.sh --profile legacy-ci"
 This value overrides any value inherited from parent directories. The command runs from the detected project directory inside the same container environment that the language default uses.
 
 When `build-command` is set, it replaces the language default preparation command. The command must leave the project in the state expected by the updater.
+
+### `updater-args`
+
+Configures options used when updating a detected project, such as where to place imported elements or whether test code should be included.
+
+```yaml
+updater-args:
+  parent-element-path: "billing-service"
+  ignore-test-code: true
+```
+
+Common options:
+
+| Name | Description |
+| --- | --- |
+| `parent-element-path` | Places imported elements under the given BELA parent element path. |
+| `ignore-test-code` | Excludes test code when supported by the updater. |
+
