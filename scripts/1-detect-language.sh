@@ -2,7 +2,7 @@
 set -euo pipefail
 
 action_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# shellcheck source=utils/project.sh
+# shellcheck source=scripts/utils/project.sh
 source "$action_dir/scripts/utils/project.sh"
 
 working_directory="${BELA_WORKING_DIRECTORY:-.}"

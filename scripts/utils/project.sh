@@ -266,6 +266,7 @@ bela_apply_directory_config() {
   file="$(bela_config_file "$dir")"
 
   if bela_read_config_value "$file" "build-command"; then
+    # shellcheck disable=SC2034
     build_command_ref="$BELA_CONFIG_VALUE"
   fi
 
@@ -294,6 +295,7 @@ bela_apply_directory_config() {
 bela_updater_args_from_options() {
   local updater_options_name="$1"
   local option_name
+  # shellcheck disable=SC2178
   local -n updater_options_ref="$updater_options_name"
 
   if ((${#updater_options_ref[@]} == 0)); then
@@ -329,6 +331,7 @@ bela_updater_options_from_lines() {
 bela_updater_options_to_lines() {
   local updater_options_name="$1"
   local option_name
+  # shellcheck disable=SC2178
   local -n updater_options_ref="$updater_options_name"
 
   if ((${#updater_options_ref[@]} == 0)); then
@@ -347,6 +350,7 @@ find_project_dirs() {
   local -A default_updater_options=()
 
   if [[ -n "${BELA_PARENT_ELEMENT_PATH:-}" ]]; then
+    # shellcheck disable=SC2034
     default_updater_options["parent-element-path"]="$BELA_PARENT_ELEMENT_PATH"
   fi
 
@@ -363,6 +367,7 @@ find_project_dirs_with_config() {
   local child_name
   local build_command="$inherited_build_command"
   local updater_option_lines
+  # shellcheck disable=SC2034
   local -A effective_updater_options=()
 
   if bela_config_ignore_projects "$dir"; then

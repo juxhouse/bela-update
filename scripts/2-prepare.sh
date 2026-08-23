@@ -52,10 +52,7 @@ case "$language" in
     # projects with build-tool images, then run the updater offline later.
     if [[ -f pom.xml ]]; then
       m2_directory="${HOME:?HOME is required to locate the default Maven .m2 directory.}/.m2"
-      if [[ ! -d "$m2_directory" ]]; then
-        echo "Could not find the default Maven .m2 directory at $m2_directory." >&2
-        exit 1
-      fi
+      mkdir -p "$m2_directory"
       m2_directory="$(cd "$m2_directory" && pwd -P)"
       java_maven_build_command="mvn -B clean install && mvn -B dependency:build-classpath -Dmdep.outputFile=target/classpath.txt"
       docker pull maven:3.9.6-eclipse-temurin-21
