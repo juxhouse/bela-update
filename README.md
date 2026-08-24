@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - id: bela
-        uses: juxhouse/bela-update@2026-07-13-09-40
+        uses: juxhouse/bela-update@2026-08-23
         env:
           BELA_API_URL: "https://${{ vars.BELA_HOST }}"
           BELA_API_TOKEN: ${{ secrets.BELA_TOKEN }}
@@ -47,7 +47,7 @@ When using the action directly, configuration is passed through environment vari
 | --- | --- | --- |
 | `BELA_API_URL` | yes | BELA backend URL. |
 | `BELA_API_TOKEN` | yes | BELA API token. |
-| `BELA_PARENT_ELEMENT_PATH` | no | Optional default BELA parent element path. `.bela/bela.yml` can override it per directory. |
+| `BELA_PARENT_ELEMENT_PATH` | no | Optional default BELA parent element path. `.bela/bela.yml` can override it with `updater-args.parent-element-path`. |
 
 
 ## Supported Detection
@@ -60,7 +60,6 @@ The action automatically detects:
 | Clojure | `deps.edn`, `project.clj` |
 | Java | `pom.xml`, `build.gradle`, `build.gradle.kts`, `gradlew` |
 | JavaScript | `package.json` |
-| Ruby | `Gemfile` |
 | TypeScript | `package.json` |
 
 ## Project Discovery
@@ -81,9 +80,14 @@ Any directory can define BELA configuration in `.bela/bela.yml`. The action appl
 
 ```yaml
 ignore-projects: true
-parent-element-path: "billing-service"
 build-command: "./scripts/build-for-bela.sh --profile legacy-ci"
+updater-args:
+  parent-element-path: "billing-service"
+  ignore-test-code: true
 ```
+
+> [!IMPORTANT]
+> `updater-args` must use options supported by the updater for the detected project. See the [BELA updater docs](https://github.com/juxhouse/bela-resources/tree/main/updaters) for options available by updater.
 
 See [`.bela` directory configuration](docs/bela-directory.md) for the supported keys and inheritance rules.
 

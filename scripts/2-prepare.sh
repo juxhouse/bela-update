@@ -2,12 +2,17 @@
 set -euo pipefail
 
 working_directory="${BELA_WORKING_DIRECTORY:-.}"
-language="${BELA_LANGUAGE:?BELA_LANGUAGE is required. Run detect-language.sh first.}"
+language="${BELA_LANGUAGE:?BELA_LANGUAGE is required. Run 1-detect-language.sh first.}"
 updater_tag="${BELA_UPDATER_TAG:-latest}"
 build_command="${1:-}"
 
 cd "$working_directory"
 mkdir -p .bela
+
+if [[ -n "$build_command" ]]; then
+  bash -lc "$build_command"
+  exit 0
+fi
 
 updater_image="juxhouse/bela-updater-${language}:${updater_tag}"
 
@@ -27,43 +32,18 @@ run_prepare_in_updater_image() {
 
 case "$language" in
   clojure)
-    if [[ -n "$build_command" ]]; then
-      run_prepare_in_updater_image \
-        "mkdir -p /workspace/.bela /workspace/.m2 /workspace/.gitlibs && $build_command && { [ ! -d /root/.m2 ] || cp -R /root/.m2/. /workspace/.m2/; } && { [ ! -d /root/.gitlibs ] || cp -R /root/.gitlibs/. /workspace/.gitlibs/; }"
-    else
-      run_prepare_in_updater_image \
-        'mkdir -p /workspace/.bela /workspace/.m2 /workspace/.gitlibs && if [ -f project.clj ]; then lein deps; else clojure -A:test:dev -P && clojure -A:test:dev -Spath; fi && { [ ! -d /root/.m2 ] || cp -R /root/.m2/. /workspace/.m2/; } && { [ ! -d /root/.gitlibs ] || cp -R /root/.gitlibs/. /workspace/.gitlibs/; }'
-    fi
+    run_prepare_in_updater_image \
+      'mkdir -p /workspace/.bela /workspace/.m2 /workspace/.gitlibs && if [ -f project.clj ]; then lein deps; else clojure -A:test:dev -P && clojure -A:test:dev -Spath; fi && { [ ! -d /root/.m2 ] || cp -R /root/.m2/. /workspace/.m2/; } && { [ ! -d /root/.gitlibs ] || cp -R /root/.gitlibs/. /workspace/.gitlibs/; }'
     ;;
 
   typescript)
-    if [[ -n "$build_command" ]]; then
-      run_prepare_in_updater_image \
-        "mkdir -p /workspace/.bela && $build_command"
-    else
-      run_prepare_in_updater_image \
-        'mkdir -p /workspace/.bela && if [ -f package-lock.json ]; then npm ci; elif [ -f npm-shrinkwrap.json ]; then npm ci; else npm install; fi'
-    fi
-    ;;
-
-  ruby)
-    if [[ -n "$build_command" ]]; then
-      run_prepare_in_updater_image \
-        "mkdir -p /workspace/.bela/external_gems && $build_command"
-    else
-      run_prepare_in_updater_image \
-        'mkdir -p /workspace/.bela/external_gems && gem install bundler --no-document && bundle config set --local path /workspace/.bela/external_gems && bundle install'
-    fi
+    run_prepare_in_updater_image \
+      'mkdir -p /workspace/.bela && if [ -f package-lock.json ]; then npm ci; elif [ -f npm-shrinkwrap.json ]; then npm ci; else npm install; fi'
     ;;
 
   dotnet)
-    if [[ -n "$build_command" ]]; then
-      run_prepare_in_updater_image \
-        "mkdir -p /workspace/.bela/dependencies && $build_command"
-    else
-      run_prepare_in_updater_image \
-        'mkdir -p /workspace/.bela/dependencies && dotnet restore --packages /workspace/.bela/dependencies'
-    fi
+    run_prepare_in_updater_image \
+      'mkdir -p /workspace/.bela/dependencies && dotnet restore --packages /workspace/.bela/dependencies'
     ;;
 
   java)
@@ -71,18 +51,19 @@ case "$language" in
     # updater jar, but no Maven, Gradle, or JDK build tools. Prepare Java
     # projects with build-tool images, then run the updater offline later.
     if [[ -f pom.xml ]]; then
-      mkdir -p .m2
-      java_maven_build_command="${build_command:-mvn -B -Dmaven.repo.local=/.m2/repository clean install && mvn -B -Dmaven.repo.local=/.m2/repository dependency:build-classpath -Dmdep.outputFile=target/classpath.txt}"
+      m2_directory="${HOME:?HOME is required to locate the default Maven .m2 directory.}/.m2"
+      mkdir -p "$m2_directory"
+      m2_directory="$(cd "$m2_directory" && pwd -P)"
+      java_maven_build_command="mvn -B clean install && mvn -B dependency:build-classpath -Dmdep.outputFile=target/classpath.txt"
       docker pull maven:3.9.6-eclipse-temurin-21
       docker run --rm \
-        -v "$PWD/.m2:/.m2" \
-        -v "$PWD/.m2:/root/.m2" \
+        -v "$m2_directory:/root/.m2" \
         -v "$PWD:/workspace" \
         -w /workspace \
         maven:3.9.6-eclipse-temurin-21 \
-        /bin/sh -lc "mkdir -p /workspace/.bela /.m2 /root/.m2 /workspace/target && $java_maven_build_command"
+        /bin/sh -lc "mkdir -p /workspace/.bela /workspace/target && $java_maven_build_command"
     else
-      java_gradle_build_command="${build_command:-if [ -f ./gradlew ]; then chmod +x ./gradlew && ./gradlew clean build && ./gradlew belaBuild --init-script bela.gradle; else gradle clean build && gradle belaBuild --init-script bela.gradle; fi}"
+      java_gradle_build_command="if [ -f ./gradlew ]; then chmod +x ./gradlew && ./gradlew clean build && ./gradlew belaBuild --init-script bela.gradle; else gradle clean build && gradle belaBuild --init-script bela.gradle; fi"
       docker pull gradle:8.10.2-jdk21
       cat > bela.gradle <<'EOF'
 allprojects {
