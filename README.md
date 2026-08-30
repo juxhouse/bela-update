@@ -1,9 +1,9 @@
 # BELA Update Action
 
-Add this Github action to your repo to keep BELA in sync with it.
+This is the easiest way to keep BELA in sync with repos that use **standard builds**.
 
 > [!IMPORTANT]
-> This action might NOT work if your project has a non-standard build. In that case, use the [BELA Docker App](https://github.com/juxhouse/bela-resources/blob/main/CodeSynchronization.md) directly.
+> If your project has a non-standard build, this action might NOT work. Use the [BELA Docker App](https://github.com/juxhouse/bela-resources/blob/main/CodeSynchronization.md) directly.
 
 ## Create the Action
 
