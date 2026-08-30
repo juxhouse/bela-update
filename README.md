@@ -3,7 +3,7 @@
 Add this Github action to your repo to keep BELA in sync with it.
 
 > [!IMPORTANT]
-> This action might NOT work if your project has a non-standard build. In that case use this.
+> This action might NOT work if your project has a non-standard build. In that case, use the [BELA Docker App](https://github.com/juxhouse/bela-resources/blob/main/CodeSynchronization.md) directly.
 
 ## Create the Action
 
