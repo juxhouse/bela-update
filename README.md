@@ -1,23 +1,16 @@
 # BELA Update Action
 
-GitHub Action for updating BELA from a repository without sending source code to BELA.
+Add this Github action to your repo to keep BELA in sync with it.
 
-The action discovers supported projects in GitHub Actions, prepares each project, runs the matching BELA updater Docker image with `--network=none`, and uploads only generated `.bela/bela-update.ecd` files to the BELA API.
+> [!IMPORTANT]
+> This action might NOT work if your project has a non-standard build. In that case use this.
 
-## Table of Contents
+## Create the Action
 
-- [Action](#action)
-- [Supported Detection](#supported-detection)
-- [Project Discovery](#project-discovery)
-- [Repository Configuration](#repository-configuration)
-- [Security Model](#security-model)
-
-## Action
-
-Use the [action](https://docs.github.com/en/actions/concepts/workflows-and-actions/about-custom-actions) directly when you need to customize the job or run project-specific steps before the update.
+Create an action called `.github/workflows/bela-update.yml` in your repo.
 
 ```yaml
-name: update-bela
+name: bela-update
 on:
   push:
   workflow_dispatch:  # Allows manual execution.
@@ -36,23 +29,22 @@ jobs:
         env:
           BELA_API_URL: "https://${{ vars.BELA_HOST }}"
           BELA_API_TOKEN: ${{ secrets.BELA_TOKEN }}
+          # Optional parent element path:
           BELA_PARENT_ELEMENT_PATH: ${{ vars.BELA_PARENT_ELEMENT_PATH }}
 ```
 
 ### Action Environment Variables
 
-When using the action directly, configuration is passed through environment variables.
-
-| Name | Required | Description |
-| --- | --- | --- |
-| `BELA_API_URL` | yes | BELA backend URL. |
-| `BELA_API_TOKEN` | yes | BELA API token. |
-| `BELA_PARENT_ELEMENT_PATH` | no | Optional default BELA parent element path. `.bela/bela.yml` can override it with `updater-args.parent-element-path`. |
+| Name | Description |
+| --- | --- |
+| `BELA_API_URL` | BELA backend URL. |
+| `BELA_API_TOKEN` | BELA API token. |
+| `BELA_PARENT_ELEMENT_PATH` | Optional. Parent element path. `.bela/bela.yml` can override it with `updater-args.parent-element-path`. |
 
 
-## Supported Detection
+## Supported Languages
 
-The action automatically detects:
+The action automatically detects projects in these languages:
 
 | Language | Files |
 | --- | --- |
