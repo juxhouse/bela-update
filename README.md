@@ -33,13 +33,19 @@ jobs:
           BELA_PARENT_ELEMENT_PATH: ${{ vars.BELA_PARENT_ELEMENT_PATH }}
 ```
 
-### Action Environment Variables
+### Secrets and Environment Variables
+
+On your project's Github page, go to `Settings > Secrets and variables > Actions`
+
+On the Secrets tab, create a secret for:
+
+
 
 | Name | Description |
 | --- | --- |
 | `BELA_API_URL` | BELA backend URL. |
 | `BELA_API_TOKEN` | BELA API token. |
-| `BELA_PARENT_ELEMENT_PATH` | Optional. Parent element path. `.bela/bela.yml` can override it with `updater-args.parent-element-path`. |
+| `BELA_PARENT_ELEMENT_PATH` | Optional. Parent element path. |
 
 
 ## Supported Languages
