@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       bela-api-url:
-        description: Base URL of the BELA backend, for example https://bela.example.com.
+        description: Base URL of the BELA backend API, for example https://bela.example.com/api.
         required: true
         type: string
       parent-element-path:

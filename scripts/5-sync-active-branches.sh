@@ -16,7 +16,7 @@ payload="$(jq -cn \
   --args '{source: $source, activeBranches: $ARGS.positional}' \
   -- "$@")"
 
-curl -f "${api_url%/}/api/active-branches-set" \
+curl -f "$api_url/active-branches-set" \
   -H "Authorization: $api_token" \
   -H 'Content-Type: application/json' \
   --data "$payload"

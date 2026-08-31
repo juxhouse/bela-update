@@ -13,6 +13,6 @@ if [[ ! -f "$ecd_file" ]]; then
   exit 1
 fi
 
-curl -f "${api_url%/}/api/ecd-architecture" \
+curl -f "$api_url/ecd-architecture" \
   -H "Authorization: $api_token" \
   --data-binary "@$ecd_file"
