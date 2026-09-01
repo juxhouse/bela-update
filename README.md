@@ -35,7 +35,7 @@ jobs:
         uses: juxhouse/bela-update@2026-08-23
         env:
           BELA_API_URL: "https://${{ vars.BELA_HOST }}"
-          BELA_API_TOKEN: ${{ secrets.BELA_TOKEN }}
+          BELA_API_TOKEN: ${{ secrets.BELA_API_TOKEN }}
           BELA_PARENT_ELEMENT_PATH: ${{ vars.BELA_PARENT_ELEMENT_PATH }}
 ```
 
@@ -45,9 +45,9 @@ When using the action directly, configuration is passed through environment vari
 
 | Name | Required | Description |
 | --- | --- | --- |
-| `BELA_API_URL` | yes | BELA backend URL. |
+| `BELA_HOST` | yes | BELA backend Host. Example: acme.bela.live |
 | `BELA_API_TOKEN` | yes | BELA API token. |
-| `BELA_PARENT_ELEMENT_PATH` | no | Optional default BELA parent element path. `.bela/bela.yml` can override it with `updater-args.parent-element-path`. |
+| `BELA_PARENT_ELEMENT_PATH` | no | Optional default BELA parent element path. |
 
 
 ## Supported Detection
