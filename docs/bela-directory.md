@@ -12,6 +12,13 @@ updater-args:
   ignore-test-code: true
 ```
 
+Other top-level keys, sequences, nested updater option values, and non-string
+`build-command` values are rejected. `updater-args` must use the nested block
+form shown above, and its option values must be YAML scalars.
+Duplicate keys and YAML aliases are rejected. Build commands and updater option
+values must be single-line values. Quote values that must remain strings, such
+as identifiers with leading zeros.
+
 ## Inheritance
 
 Configuration is applied from the action working directory down to each detected project. Values defined closer to the project override values from parent directories.
@@ -52,6 +59,7 @@ build-command: "./scripts/build-for-bela.sh --profile legacy-ci"
 This value overrides any value inherited from parent directories. The command runs directly on the runner from the detected project directory.
 
 When `build-command` is set, it replaces the language default preparation command. The command must leave the project in the state expected by the updater.
+An empty string restores default preparation for that subtree.
 
 Preparation requirements by language:
 
@@ -74,6 +82,10 @@ updater-args:
 ```
 
 Common options:
+
+Options are merged by name with inherited options. An empty or null option value
+removes that inherited argument; `false` and `0` are passed literally. Each option
+is passed as two arguments (`-name`, `value`), preserving spaces and punctuation.
 
 | Name | Description |
 | --- | --- |

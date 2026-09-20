@@ -1,0 +1,47 @@
+name: test
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Test
+        run: npm test
+      - name: Check committed action bundle
+        run: npm run check:dist
+      - name: Validate custom build routing
+        run: npm run test:integration
+      - name: Validate bundled action
+        run: tests/custom-build.sh --mock
+        env:
+          BELA_ACTION_ENTRYPOINT: ${{ github.workspace }}/dist/index.cjs
+      - name: Smoke test native action
+        uses: ./
+        id: smoke
+        env:
+          BELA_DRY_RUN: 'true'
+      - name: Check action outputs
+        env:
+          LANGUAGES: ${{ steps.smoke.outputs.languages }}
+          SOURCES: ${{ steps.smoke.outputs.sources }}
+        run: |
+          test "$LANGUAGES" = typescript
+          test -n "$SOURCES"
+      - name: Check shell integration test
+        run: |
+          bash -n tests/custom-build.sh
+          shellcheck -x tests/custom-build.sh
+      - name: Check whitespace
+        run: git diff --check

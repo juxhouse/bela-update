@@ -1,0 +1,5 @@
+node_modules/
+coverage/
+.bela/
+.clj-kondo/
+.lsp/
